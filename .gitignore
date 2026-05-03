@@ -1,0 +1,36 @@
+# ── Python ───────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual environments ─────────────────────────
+venv/
+env/
+.env/
+.venv/
+
+# ── Data file (contains real user data — do not commit) ──
+fleet_data.json
+
+# ── Server PID file (temp file, auto-created/deleted) ──
+.server.pid
+
+# ── OS files ─────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor files ─────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────
+*.log
