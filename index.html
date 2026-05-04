@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleet Fuel Management — Pampanga</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- MODALS -->
+<div id="modalOverlay" class="modal-overlay hidden">
+
+  <!-- RECORD FORM -->
+  <div id="modalRecord" class="modal hidden">
+    <div class="modal-header">
+      <span>MILEAGE AND FUEL RECORD</span>
+      <button class="modal-close" onclick="closeModal('modalRecord')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-col">
+          <div class="field-group">
+            <label>DATE <span class="req">*</span></label>
+            <input type="date" id="fDate">
+          </div>
+          <div class="field-group">
+            <label>PLATE <span class="req">*</span></label>
+            <select id="fPlate" onchange="onPlateChange()">
+              <option value="">— Select Vehicle —</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>VEHICLE</label>
+            <input type="text" id="fVehicle" readonly class="readonly-field">
+          </div>
+          <div class="field-group">
+            <label>DRIVER</label>
+            <select id="fDriver"><option value="">— Select —</option></select>
+          </div>
+          <div class="field-group">
+            <label>START (LOCATION)</label>
+            <select id="fStart"><option value="">— Select —</option></select>
+          </div>
+          <div class="field-group">
+            <label>END (LOCATION)</label>
+            <select id="fEnd"><option value="">— Select —</option></select>
+          </div>
+          <div class="field-group">
+            <label>START ODOMETER (KM)</label>
+            <input type="number" id="fStartMile" placeholder="0">
+          </div>
+          <div class="field-group">
+            <label>END ODOMETER (KM) <span class="req">*</span></label>
+            <input type="number" id="fEndMile" placeholder="0" oninput="calcFields()">
+          </div>
+        </div>
+        <div class="form-col">
+          <div class="field-group">
+            <label>DISTANCE (KM)</label>
+            <input type="number" id="fDistance" readonly class="readonly-field calc-field">
+          </div>
+          <div class="field-group">
+            <label>LITERS <span class="req">*</span></label>
+            <input type="number" id="fGallon" step="0.01" placeholder="0.00" oninput="calcFields()">
+          </div>
+          <div class="field-group">
+            <label>COST (₱) <span class="req">*</span></label>
+            <input type="number" id="fCost" step="0.01" placeholder="0.00" oninput="calcFields()">
+          </div>
+          <div class="field-group">
+            <label>KM / LITER</label>
+            <input type="text" id="fDistGal" readonly class="readonly-field calc-field">
+          </div>
+          <div class="field-group">
+            <label>₱ / KM</label>
+            <input type="text" id="fCostMile" readonly class="readonly-field calc-field">
+          </div>
+          <div class="field-group">
+            <label>DOCUMENT TYPE</label>
+            <select id="fDocType"><option value="">— Select —</option></select>
+          </div>
+          <div class="field-group">
+            <label>DOCUMENT #</label>
+            <input type="text" id="fDocNum" placeholder="Receipt / invoice number">
+          </div>
+          <div class="field-group">
+            <label>COMMENT</label>
+            <input type="text" id="fComment" placeholder="Optional">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div id="alertBanner" class="alert-banner hidden"></div>
+      <button class="btn-secondary" onclick="closeModal('modalRecord')">CANCEL</button>
+      <button class="btn-primary" id="btnSaveRecord" onclick="saveRecord()">SAVE</button>
+    </div>
+  </div>
+
+  <!-- REPORTS DIALOG -->
+  <div id="modalReports" class="modal modal-sm hidden">
+    <div class="modal-header">
+      <span>GENERATE REPORT</span>
+      <button class="modal-close" onclick="closeModal('modalReports')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="togDriver"  onclick="setReportMode('driver')">BY DRIVER</button>
+        <button class="toggle-btn"        id="togVehicle" onclick="setReportMode('vehicle')">BY VEHICLE</button>
+      </div>
+      <div class="field-group mt-16">
+        <label>START DATE</label>
+        <input type="date" id="rStartDate">
+      </div>
+      <div class="field-group">
+        <label>END DATE</label>
+        <input type="date" id="rEndDate">
+      </div>
+      <div class="field-group">
+        <label id="rSelectorLabel">DRIVER</label>
+        <select id="rSelector"><option value="">— All —</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modalReports')">CANCEL</button>
+      <button class="btn-primary" onclick="generateReport()">GENERATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-icon">⛽</div>
+      <div>
+        <div class="brand-title">FLEET FUEL MANAGEMENT</div>
+        <div class="brand-sub">PROVINCE OF PAMPANGA</div>
+      </div>
+    </div>
+    <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
+    <nav class="topbar-nav" id="topNav">
+      <button class="nav-btn active" data-page="home"          onclick="navigate('home')">HOME</button>
+      <button class="nav-btn"        data-page="vehicles"      onclick="navigate('vehicles')">VEHICLES</button>
+      <button class="nav-btn"        data-page="configuration" onclick="navigate('configuration')">SETTINGS</button>
+      <button class="nav-btn"        data-page="records"       onclick="navigate('records')">RECORDS</button>
+      <button class="nav-btn"        data-page="dashboard"     onclick="navigate('dashboard')">DASHBOARD</button>
+      <button class="nav-btn"        data-page="reports"       onclick="navigate('reports')">REPORTS</button>
+    </nav>
+  </header>
+
+  <!-- HOME -->
+  <section id="page-home" class="page active">
+    <div class="home-hero">
+      <div class="home-icon">⛽</div>
+      <h1>Fleet Fuel Consumption Management</h1>
+      <p>Track fuel consumption, mileage, and costs across your fleet — Province of Pampanga.</p>
+    </div>
+    <div class="home-grid">
+      <div class="home-card" onclick="navigate('vehicles')">
+        <div class="home-card-icon">🚛</div>
+        <div class="home-card-title">VEHICLES</div>
+        <div class="home-card-desc">Manage fleet vehicles, drivers, and alert thresholds</div>
+      </div>
+      <div class="home-card" onclick="navigate('configuration')">
+        <div class="home-card-icon">⚙️</div>
+        <div class="home-card-title">SETTINGS</div>
+        <div class="home-card-desc">Manage locations in Pampanga and document types</div>
+      </div>
+      <div class="home-card" onclick="navigate('records')">
+        <div class="home-card-icon">📋</div>
+        <div class="home-card-title">RECORDS</div>
+        <div class="home-card-desc">Log every trip — fuel, distance, and cost</div>
+      </div>
+      <div class="home-card" onclick="navigate('dashboard')">
+        <div class="home-card-icon">📊</div>
+        <div class="home-card-title">DASHBOARD</div>
+        <div class="home-card-desc">Live charts and KPIs — filter by date, vehicle, driver</div>
+      </div>
+      <div class="home-card" onclick="navigate('reports')">
+        <div class="home-card-icon">📄</div>
+        <div class="home-card-title">REPORTS</div>
+        <div class="home-card-desc">Generate detailed reports by driver or vehicle</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VEHICLES -->
+  <section id="page-vehicles" class="page hidden">
+    <div class="page-header">
+      <h2>VEHICLES</h2>
+      <button class="btn-primary" onclick="openAddVehicle()">+ ADD VEHICLE</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>PLATE</th><th>VEHICLE</th><th>DRIVER</th>
+          <th>TRIP ALERT (KM)</th><th>MAX LITERS</th>
+          <th>ALERT KM/L</th><th>ALERT ₱/KM</th><th>ACTIONS</th>
+        </tr></thead>
+        <tbody id="vehiclesTbody"></tbody>
+      </table>
+    </div>
+    <div id="vehicleForm" class="inline-form hidden">
+      <div class="inline-form-title" id="vehicleFormTitle">ADD VEHICLE</div>
+      <div class="inline-form-grid">
+        <div class="field-group"><label>PLATE *</label><input type="text" id="vPlate" placeholder="e.g. 2468-PAM"></div>
+        <div class="field-group"><label>VEHICLE NAME *</label><input type="text" id="vName" placeholder="e.g. ISUZU ELF NHR"></div>
+        <div class="field-group"><label>DRIVER *</label><input type="text" id="vDriver" placeholder="Full name"></div>
+        <div class="field-group"><label>TRIP ALERT (KM)</label><input type="number" id="vTripAlert" placeholder="300"></div>
+        <div class="field-group"><label>MAX LITERS (TANK)</label><input type="number" id="vMaxGal" placeholder="60"></div>
+        <div class="field-group"><label>ALERT KM/LITER</label><input type="number" id="vAlertMpg" step="0.1" placeholder="7"></div>
+        <div class="field-group"><label>ALERT ₱/KM</label><input type="number" id="vAlertCost" step="0.01" placeholder="20"></div>
+      </div>
+      <div class="inline-form-actions">
+        <button class="btn-secondary" onclick="cancelVehicleForm()">CANCEL</button>
+        <button class="btn-primary" onclick="saveVehicle()">SAVE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="page-configuration" class="page hidden">
+    <div class="page-header"><h2>SETTINGS</h2></div>
+    <div class="config-grid">
+      <div class="config-panel">
+        <div class="config-panel-header">
+          <span>LOCATIONS (PAMPANGA)</span>
+          <button class="btn-sm" onclick="addConfigItem('sites')">+ ADD</button>
+        </div>
+        <ul id="sitesList" class="config-list"></ul>
+      </div>
+      <div class="config-panel">
+        <div class="config-panel-header">
+          <span>DOCUMENT TYPES</span>
+          <button class="btn-sm" onclick="addConfigItem('docTypes')">+ ADD</button>
+        </div>
+        <ul id="docTypesList" class="config-list"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- RECORDS -->
+  <section id="page-records" class="page hidden">
+    <div class="page-header">
+      <h2>MILEAGE AND FUEL RECORDS</h2>
+      <button class="btn-primary" onclick="openRecordForm('new')">+ REGISTER</button>
+    </div>
+    <div class="records-info">Click any row to edit the record.</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>DATE</th><th>PLATE</th><th>VEHICLE</th><th>DRIVER</th>
+          <th>START</th><th>END</th>
+          <th>START ODO</th><th>END ODO</th>
+          <th>KM</th><th>LITERS</th><th>COST (₱)</th>
+          <th>KM/L</th><th>₱/KM</th>
+          <th>DOC TYPE</th><th>#DOC</th><th>COMMENT</th>
+        </tr></thead>
+        <tbody id="recordsTbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="page-dashboard" class="page hidden">
+    <div class="page-header"><h2>DASHBOARD</h2></div>
+    <div class="dash-filters">
+      <div class="filter-group">
+        <label>START DATE</label>
+        <input type="date" id="dStartDate" onchange="renderDashboard()">
+      </div>
+      <div class="filter-group">
+        <label>END DATE</label>
+        <input type="date" id="dEndDate" onchange="renderDashboard()">
+      </div>
+      <div class="filter-group">
+        <label>PLATE (multi-select)</label>
+        <select id="dPlates" multiple onchange="renderDashboard()"></select>
+      </div>
+      <div class="filter-group">
+        <label>DRIVER (multi-select)</label>
+        <select id="dDrivers" multiple onchange="renderDashboard()"></select>
+      </div>
+      <button class="btn-secondary" onclick="clearDashFilters()">CLEAR FILTERS</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">TOTAL LITERS</div>
+        <div class="kpi-value" id="kpiGallons">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">AVG KM / LITER</div>
+        <div class="kpi-value" id="kpiMpg">0.00</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">TOTAL COST (₱)</div>
+        <div class="kpi-value" id="kpiCost">₱0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">TOTAL DISTANCE (KM)</div>
+        <div class="kpi-value" id="kpiDist">0</div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">LITERS PER MONTH</div>
+        <canvas id="chartGallons"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">AVG KM/LITER PER MONTH</div>
+        <canvas id="chartMpg"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">COST (₱) PER MONTH</div>
+        <canvas id="chartCost"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">DISTANCE (KM) PER MONTH</div>
+        <canvas id="chartDist"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORTS -->
+  <section id="page-reports" class="page hidden">
+    <div class="page-header">
+      <h2>REPORTS</h2>
+      <button class="btn-primary" onclick="openReportDialog()">GENERATE REPORT</button>
+    </div>
+    <div id="reportOutput" class="report-output hidden">
+      <div class="report-header-block">
+        <div class="report-title-bar" id="reportTitle">REPORT</div>
+        <div class="report-meta" id="reportMeta"></div>
+        <div class="kpi-row" id="reportKpis"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead id="reportTableHead"></thead>
+          <tbody id="reportTableBody"></tbody>
+        </table>
+      </div>
+      <button class="btn-secondary mt-16" onclick="printReport()">🖨 PRINT / SAVE PDF</button>
+    </div>
+    <div id="reportPlaceholder" class="report-placeholder">
+      <div class="placeholder-icon">📄</div>
+      <div>Click <strong>Generate Report</strong> to get started.</div>
+    </div>
+  </section>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
